@@ -438,11 +438,15 @@ class ElastixLogic(ScriptedLoadableModuleLogic):
     self.addLog(message)
     return 0
 
-  def startElastix(self, cmdLineArguments):
+  def startElastix(self, cmdLineArguments, workingDirectory=None):
     self.addLog("Register volumes...")
     executableFilePath = os.path.join(self.getElastixBinDir(), self.elastixFilename)
     logging.info(f"Register volumes using: {executableFilePath}: {cmdLineArguments!r}")
-    return self._createSubProcess(executableFilePath, cmdLineArguments)
+
+    if workingDirectory is not None:
+      logging.info(f"Running elastix with working directory: {workingDirectory}")
+
+    return self._createSubProcess(executableFilePath, cmdLineArguments, workingDirectory=workingDirectory)
 
   def startTransformix(self, cmdLineArguments):
     self.addLog("Generate output...")
@@ -450,10 +454,10 @@ class ElastixLogic(ScriptedLoadableModuleLogic):
     logging.info(f"Generate output using: {executableFilePath}: {cmdLineArguments!r}")
     return self._createSubProcess(executableFilePath, cmdLineArguments)
 
-  def _createSubProcess(self, executableFilePath, cmdLineArguments):
+  def _createSubProcess(self, executableFilePath, cmdLineArguments, workingDirectory=None):
     return subprocess.Popen([executableFilePath] + cmdLineArguments, env=self.getElastixEnv(),
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True,
-                            startupinfo=self.getStartupInfo())
+                            startupinfo=self.getStartupInfo(), cwd=workingDirectory)
 
   def getStartupInfo(self):
     import platform
@@ -560,7 +564,7 @@ class ElastixLogic(ScriptedLoadableModuleLogic):
       inputParamsElastix += self._addParameterFiles(parameterFilenames)
       inputParamsElastix += ['-out', resultTransformDir]
 
-      elastixProcess = self.startElastix(inputParamsElastix)
+      elastixProcess = self.startElastix(inputParamsElastix, workingDirectory=tempDir)
       self.logProcessOutput(elastixProcess)
 
       if self.cancelRequested:
